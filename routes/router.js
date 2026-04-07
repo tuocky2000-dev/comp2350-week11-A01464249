@@ -89,4 +89,56 @@ router.get('/deleteUser', async (req, res) => {
 		console.log(ex);
 	}
 });
+router.get('/showPets', async (req, res) => {
+	try {
+		console.log("show pets");
+
+		const schema = Joi.string().max(30).required();
+		const validationResult = schema.validate(req.query.id);
+		if (validationResult.error != null) {
+			console.log(validationResult.error);
+			res.render('error', {message: 'Invalid user id'});
+			return;
+		}
+
+		const petCollection = database.db('lab_example').collection('pets');
+		const pets = await petCollection.find({user_id: new ObjectId(req.query.id)}).toArray();
+
+		console.log(pets);
+		res.render('pets', {allPets: pets, user_id: req.query.id});
+	}
+	catch(ex) {
+		res.render('error', {message: 'Error connecting to MongoDB'});
+		console.log(ex);
+	}
+});
+router.post('/addPet', async (req, res) => {
+	try {
+		console.log("add pet");
+
+		const schema = Joi.object({
+			name: Joi.string().max(20).required(),
+			user_id: Joi.string().max(30).required()
+		});
+
+		const validationResult = schema.validate(req.body);
+		if (validationResult.error != null) {
+			console.log(validationResult.error);
+			res.render('error', {message: validationResult.error.message});
+			return;
+		}
+
+		const petCollection = database.db('lab_example').collection('pets');
+		await petCollection.insertOne({
+			name: req.body.name,
+			user_id: new ObjectId(req.body.user_id)
+		});
+
+		res.redirect("/showPets?id=" + req.body.user_id);
+	}
+	catch(ex) {
+		res.render('error', {message: 'Error connecting to MongoDB'});
+		console.log(ex);
+	}
+});
 module.exports = router;
